@@ -1,0 +1,52 @@
+#!/bin/sh
+LARAVEL_OWNER=sail # <-- owner (user)
+LARAVEL_WS_GROUP=sail # <-- WebServer group
+LARAVEL_ROOT=/app # <-- Laravel root directory
+
+echo "🎬 fixing permissions"
+
+if [ ! -z "$WWWUSER_ID" ]; then
+    usermod -o -u $WWWUSER_ID ${LARAVEL_OWNER}
+fi
+
+if [ ! -z "$WWWGROUP_ID" ]; then
+    groupmod -o -g $WWWGROUP_ID ${LARAVEL_WS_GROUP}
+fi
+
+# BEGIN Fix Laravel Permissions Script
+
+# Adding owner to web server group
+usermod -a -G ${LARAVEL_WS_GROUP} ${LARAVEL_OWNER}
+
+# Create empty Laravel log file
+gosu $LARAVEL_OWNER touch ${LARAVEL_ROOT}/storage/logs/laravel.log
+
+# Fix Caddy permissions
+chown -R ${LARAVEL_OWNER}:${LARAVEL_WS_GROUP} /config
+
+# END Fix Laravel Permissions Script
+
+if [ -f "${LARAVEL_PATH}/composer.json" ]; then
+    echo "🎬 composer commands"
+    echo "🎬 Detecting enviroment: ${APP_ENV}"
+    if [ "${APP_ENV}" = "local" ]; then
+        echo "🎬 local environment detected"
+        gosu $LARAVEL_OWNER composer install
+    else
+        echo "🎬 production environment detected"
+        gosu $LARAVEL_OWNER composer install --no-dev
+    fi
+fi
+
+# 💡 Group into a custom command e.g. php artisan app:on-deploy
+if [ -f "${LARAVEL_PATH}/artisan" ]; then
+    echo "🎬 artisan commands"
+    gosu $LARAVEL_OWNER php artisan app:on-deploy
+fi
+
+echo "🎬 set laravel scheduler cron job"
+echo "* * * * * sail cd /app && /usr/local/bin/php /app/artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-scheduler
+chmod 644 /etc/cron.d/laravel-scheduler
+echo "sleep 10 && cd /app && php artisan app:started" > /tmp/startup.sh
+chmod +x /tmp/startup.sh
+/tmp/startup.sh &
