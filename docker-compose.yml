@@ -10,10 +10,10 @@ services:
             - .env
         volumes:
             - '.:/app'
-            - './.deploy/Caddyfile:/etc/caddy/Caddyfile'
-            - './.deploy/entrypoint/laravel:/docker-entrypoint.d/laravel'
-            - './.deploy/laravel-queue.conf:/etc/supervisor/conf.d/laravel-queue.conf'
-            - './.deploy/laravel-queue-logging.conf:/etc/supervisor/conf.d/laravel-queue-logging.conf'
+            - './.docker/Caddyfile:/etc/caddy/Caddyfile'
+            - './.docker/entrypoint/laravel:/docker-entrypoint.d/laravel'
+            - './.docker/laravel-queue.conf:/etc/supervisor/conf.d/laravel-queue.conf'
+            - './.docker/laravel-queue-logging.conf:/etc/supervisor/conf.d/laravel-queue-logging.conf'
         networks:
             - sail
         depends_on:
